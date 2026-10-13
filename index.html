@@ -158,4 +158,116 @@
         const config = {
             crm: {
                 title: "CRM 儀表板",
-                id: "1ET0GnR18kc6GwKGUhBYar5ZaxbvnUScW
+                subtitle: "即時同步 Google Sheet 客戶資料",
+                sheetUrl: "https://docs.google.com/spreadsheets/d/1ET0GnR18kc6GwKGUhBYar5ZaxbvnUScW57rvKGbPsSg/edit?usp=sharing",
+                csvUrl: "https://docs.google.com/spreadsheets/d/1ET0GnR18kc6GwKGUhBYar5ZaxbvnUScW57rvKGbPsSg/export?format=csv"
+            },
+            inventory: {
+                title: "庫存儀表板",
+                subtitle: "即時同步 Google Sheet 庫存與商品資料",
+                sheetUrl: "https://docs.google.com/spreadsheets/d/1_m3Fcs0Z0fqJR3vW54hlctEr193wWRBz/edit?usp=sharing&ouid=117143549039162443326&rtpof=true&sd=true",
+                csvUrl: "https://docs.google.com/spreadsheets/d/1_m3Fcs0Z0fqJR3vW54hlctEr193wWRBz/export?format=csv"
+            }
+        };
+
+        let currentTab = 'crm';
+
+        function switchTab(tabKey) {
+            currentTab = tabKey;
+            document.querySelectorAll('.nav-links li').forEach(li => li.classList.remove('active'));
+            document.getElementById(`nav-${tabKey}`).classList.add('active');
+
+            document.getElementById('page-title').innerText = config[tabKey].title;
+            document.getElementById('page-subtitle').innerText = config[tabKey].subtitle;
+            document.getElementById('sheet-link').href = config[tabKey].sheetUrl;
+
+            fetchData();
+        }
+
+        function parseCSV(text) {
+            let lines = [];
+            let row = [''];
+            let inQuotes = false;
+            
+            for (let i = 0; i < text.length; i++) {
+                let c = text[i];
+                let nextC = text[i + 1];
+                
+                if (c === '"') {
+                    if (inQuotes && nextC === '"') {
+                        row[row.length - 1] += '"';
+                        i++;
+                    } else {
+                        inQuotes = !inQuotes;
+                    }
+                } else if (c === ',' && !inQuotes) {
+                    row.push('');
+                } else if ((c === '\r' && nextC === '\n') || c === '\n') {
+                    if (c === '\r') i++;
+                    lines.push(row);
+                    row = [''];
+                } else {
+                    row[row.length - 1] += c;
+                }
+            }
+            if (row.length > 1 || row[0] !== '') {
+                lines.push(row);
+            }
+            return lines;
+        }
+
+        async function fetchData() {
+            const spinner = document.getElementById('loading-spinner');
+            const table = document.getElementById('data-table');
+            const headRow = document.getElementById('table-head-row');
+            const tbody = document.getElementById('table-body');
+            
+            spinner.style.display = 'block';
+            table.style.display = 'none';
+
+            try {
+                const response = await fetch(config[currentTab].csvUrl);
+                if (!response.ok) throw new Error('無法取得 Google Sheet 資料');
+                const csvText = await response.text();
+                const rows = parseCSV(csvText);
+
+                if (rows.length === 0) throw new Error('表單無資料');
+
+                // 標題行
+                const headers = rows[0];
+                headRow.innerHTML = headers.map(h => `<th>${h || ''}</th>`).join('');
+
+                // 資料行 (排除表頭，並過濾掉完全空白的行)
+                const dataRows = rows.slice(1).filter(r => r.some(cell => cell.trim() !== ''));
+                
+                tbody.innerHTML = dataRows.map(r => {
+                    return `<tr>${headers.map((_, i) => `<td>${r[i] !== undefined ? r[i] : ''}</td>`).join('')}</tr>`;
+                }).join('');
+
+                // 更新 KPI 數據
+                document.getElementById('kpi-rows').innerText = dataRows.length;
+                document.getElementById('kpi-cols').innerText = headers.length;
+                document.getElementById('kpi-status').innerText = '正常';
+                
+                const now = new Date();
+                document.getElementById('update-time').innerHTML = `<i class="fas fa-clock"></i> 最後同步: ${now.toLocaleTimeString()}`;
+
+                spinner.style.display = 'none';
+                table.style.display = 'table';
+            } catch (error) {
+                console.error(error);
+                spinner.innerHTML = `<span style="color: #ff6b81;"><i class="fas fa-exclamation-triangle"></i> 資料載入失敗 (請確認 Google Sheet 已設定為「知道連結的人都能檢視」)</span>`;
+            }
+        }
+
+        // 初始化載入 CRM 儀表板
+        window.onload = () => {
+            switchTab('crm');
+            // 每 30 秒自動輪詢更新一次
+            setInterval(() => {
+                fetchData();
+            }, 30000);
+        };
+    </script>
+</body>
+</html>
