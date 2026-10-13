@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>戰情室儀表板 | CRM & 庫存</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap');
+        :root {
+            --primary-pink: #ff6b81; --sidebar-bg: #293450; --sidebar-hover: #1f2840;
+            --bg-color: #f4f6f9; --card-bg: #ffffff; --text-main: #333333; --text-muted: #888888;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Nunito', sans-serif; }
+        body { background-color: var(--bg-color); color: var(--text-main); }
+        .app-container { display: flex; height: 100vh; overflow: hidden; }
+        .sidebar { width: 260px; background-color: var(--sidebar-bg); color: white; display: flex; flex-direction: column; }
+        .logo-area { height: 70px; background-color: var(--primary-pink); display: flex; align-items: center; justify-content: space-between; padding: 0 20px; }
+        .logo-area h2 { font-style: italic; font-weight: 800; letter-spacing: 1px; }
+        .menu-section { padding: 20px 0; }
+        .menu-label { font-size: 12px; color: #8c97b2; padding: 10px 20px; font-weight: 700; }
+        .nav-links { list-style: none; }
+        .nav-links li { padding: 15px 20px; cursor: pointer; display: flex; align-items: center; gap: 15px; font-size: 15px; transition: 0.3s; color: #a3afc7; }
+        .nav-links li:hover, .nav-links li.active { background-color: var(--sidebar-hover); color: white; border-left: 4px solid var(--primary-pink); }
+        .main-content { flex: 1; display: flex; flex-direction: column; overflow-y: auto; }
+        .top-bar { height: 70px; background-color: var(--primary-pink); display: flex; justify-content: space-between; align-items: center; padding: 0 30px; color: white; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .user-profile { display: flex; align-items: center; gap: 15px; }
+        .user-profile img { border-radius: 50%; width: 40px; height: 40px; border: 2px solid white; }
+        .user-info { display: flex; flex-direction: column; }
+        .user-name { font-weight: 700; font-size: 14px; }
+        .user-role { font-size: 11px; opacity: 0.8; }
+        .dashboard-area { padding: 30px; }
+        .page-header { display: flex; justify-content: space-between; align-items: center; background: var(--card-bg); padding: 20px 25px; border-radius: 10px; margin-bottom: 25px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); }
+        .header-title { display: flex; align-items: center; gap: 15px; }
+        .title-icon { width: 50px; height: 50px; background: #f4f6f9; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px; color: var(--primary-pink); }
+        .page-header h1 { font-size: 22px; color: #444; }
+        .subtitle { font-size: 13px; color: var(--text-muted); }
+        .header-actions { display: flex; align-items: center; gap: 20px; }
+        .update-time { font-size: 13px; color: var(--text-muted); background: #f0f3f5; padding: 8px 15px; border-radius: 20px; }
+        .btn-sheet { background: #22a7f0; color: white; text-decoration: none; padding: 10px 20px; border-radius: 5px; font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 8px; transition: 0.3s; box-shadow: 0 4px 10px rgba(34, 167, 240, 0.3); }
+        .btn-sheet:hover { background: #1b8ecb; transform: translateY(-2px); }
+        .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 25px; margin-bottom: 25px; }
+        .kpi-card { border-radius: 10px; padding: 25px; color: white; position: relative; overflow: hidden; box-shadow: 0 5px 15px rgba(0,0,0,0.1); text-align: center; }
+        .kpi-card h2 { font-size: 36px; font-weight: 800; margin: 10px 0 5px; }
+        .kpi-card p { font-size: 14px; opacity: 0.9; margin-bottom: 15px; }
+        .kpi-trend { font-size: 12px; background: rgba(0,0,0,0.15); padding: 5px 10px; border-radius: 15px; display: inline-block; }
+        .kpi-icon { position: absolute; top: 15px; right: 15px; width: 35px; height: 35px; background: rgba(255,255,255,0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+        .bg-blue { background: linear-gradient(135deg, #4bc0c8, #22a7f0); }
+        .bg-dark { background: linear-gradient(135deg, #485563, #29323c); }
+        .bg-green { background: linear-gradient(135deg, #2ecc71, #27ae60); }
+        .bg-pink { background: linear-gradient(135deg, #ff6b81, #ff4757); }
+        .data-table-container { background: var(--card-bg); border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); padding: 20px; }
+        .table-header h3 { font-size: 16px; color: #444; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid #eee; }
+        .table-responsive { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; font-size: 14px; }
+        thead tr { background-color: #f8f9fa; color: #555; text-align: left; }
+        th { padding: 12px 15px; font-weight: 700; border-bottom: 2px solid #ddd; white-space: nowrap; }
+        td { padding: 12px 15px; border-bottom: 1px solid #eee; color: #666; white-space: nowrap; }
+        tbody tr:hover { background-color: #fdfdfd; }
+        .loading { text-align: center; padding: 30px; color: var(--text-muted); font-weight: 600; }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <aside class="sidebar">
+            <div class="logo-area">
+                <h2>Architect</h2>
+                <i class="fas fa-bars toggle-icon"></i>
+            </div>
+            <div class="menu-section">
+                <p class="menu-label">MENU</p>
+                <ul class="nav-links">
+                    <li class="active" id="nav-crm" onclick="switchTab('crm')">
+                        <i class="fas fa-users"></i><span>CRM 儀表板</span>
+                    </li>
+                    <li id="nav-inventory" onclick="switchTab('inventory')">
+                        <i class="fas fa-box-open"></i><span>庫存儀表板</span>
+                    </li>
+                </ul>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <header class="top-bar">
+                <div class="top-bar-left"><i class="fas fa-search"></i></div>
+                <div class="top-bar-right">
+                    <div class="user-profile">
+                        <img src="https://ui-avatars.com/api/?name=Admin&background=fff&color=ff6b81" alt="User">
+                        <div class="user-info">
+                            <span class="user-name">系統管理員</span>
+                            <span class="user-role">Dashboard Admin</span>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <div class="dashboard-area">
+                <div class="page-header">
+                    <div class="header-title">
+                        <div class="title-icon"><i class="fas fa-chart-line"></i></div>
+                        <div>
+                            <h1 id="page-title">CRM 儀表板</h1>
+                            <p class="subtitle" id="page-subtitle">即時同步 Google Sheet 資料</p>
+                        </div>
+                    </div>
+                    <div class="header-actions">
+                        <span class="update-time" id="update-time"><i class="fas fa-clock"></i> 尚未同步</span>
+                        <a href="#" target="_blank" id="sheet-link" class="btn-sheet">
+                            <i class="fas fa-external-link-alt"></i> 開啟來源表單
+                        </a>
+                    </div>
+                </div>
+
+                <div class="kpi-grid">
+                    <div class="kpi-card bg-blue">
+                        <div class="kpi-icon"><i class="fas fa-database"></i></div>
+                        <h2 id="kpi-rows">0</h2>
+                        <p>總資料筆數</p>
+                        <div class="kpi-trend"><i class="fas fa-angle-up"></i> 即時連線中</div>
+                    </div>
+                    <div class="kpi-card bg-dark">
+                        <div class="kpi-icon"><i class="fas fa-columns"></i></div>
+                        <h2 id="kpi-cols">0</h2>
+                        <p>總欄位數量</p>
+                        <div class="kpi-trend">欄位動態生成</div>
+                    </div>
+                    <div class="kpi-card bg-green">
+                        <div class="kpi-icon"><i class="fas fa-check-circle"></i></div>
+                        <h2 id="kpi-status">正常</h2>
+                        <p>同步狀態</p>
+                        <div class="kpi-trend"><i class="fas fa-arrow-right"></i> 自動更新</div>
+                    </div>
+                    <div class="kpi-card bg-pink">
+                        <div class="kpi-icon"><i class="fas fa-sync-alt"></i></div>
+                        <h2 id="kpi-interval">5s</h2>
+                        <p>更新頻率</p>
+                        <div class="kpi-trend"><i class="fas fa-angle-up"></i> 自動輪詢</div>
+                    </div>
+                </div>
+
+                <div class="data-table-container">
+                    <div class="table-header">
+                        <h3><i class="fas fa-table"></i> 詳細資料列表</h3>
+                    </div>
+                    <div class="table-responsive">
+                        <div id="loading-spinner" class="loading">資料同步中...</div>
+                        <table id="data-table" style="display: none;">
+                            <thead><tr id="table-head-row"></tr></thead>
+                            <tbody id="table-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        const config = {
+            crm: {
+                title: "CRM 儀表板",
+                id: "1ET0GnR18kc6GwKGUhBYar5ZaxbvnUScW
